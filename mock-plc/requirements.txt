@@ -1,0 +1,1 @@
+# Pure Python Modbus TCP server — no external deps

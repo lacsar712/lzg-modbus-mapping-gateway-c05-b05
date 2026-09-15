@@ -1,0 +1,114 @@
+:root {
+  --bg: #0f1419;
+  --panel: #1a2332;
+  --line: #2a3a4f;
+  --text: #e8eef6;
+  --muted: #8fa3b8;
+  --accent: #3d9bfd;
+  --ok: #3ecf8e;
+  --warn: #f0a020;
+}
+
+* { box-sizing: border-box; }
+html, body, #app {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(1200px 600px at 10% -10%, #1c2b40 0%, var(--bg) 55%);
+  color: var(--text);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+a { color: inherit; text-decoration: none; }
+
+.page {
+  padding: 20px 24px 40px;
+}
+
+.card-panel {
+  background: rgba(26, 35, 50, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+.login-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(420px, 100%);
+  background: rgba(26, 35, 50, 0.95);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 28px 26px 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+
+.brand {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+
+.sub {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 22px;
+}
+
+.layout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(15, 20, 25, 0.85);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nav a {
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.nav a.router-link-active {
+  color: var(--text);
+  background: rgba(61, 155, 253, 0.18);
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.el-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: rgba(255,255,255,0.03);
+  --el-table-row-hover-bg-color: rgba(61,155,253,0.08);
+  --el-table-border-color: var(--line);
+  --el-table-text-color: var(--text);
+  --el-table-header-text-color: var(--muted);
+}
+
+.el-card {
+  --el-card-bg-color: rgba(26,35,50,0.92);
+  --el-card-border-color: var(--line);
+  color: var(--text);
+}

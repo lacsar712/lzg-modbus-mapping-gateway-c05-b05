@@ -1,0 +1,50 @@
+devices:
+  - id: plc-line-a
+    name: 产线A模拟PLC
+    endpoint: mock-plc:5020
+    unitId: 1
+    timeoutMs: 2000
+    points:
+      - name: motor_rpm
+        address: 0
+        type: float32_abcd
+        writable: true
+        scale: 1
+        offset: 0
+        min: 0
+        max: 5000
+      - name: temperature
+        address: 10
+        type: float32_cdab
+        writable: false
+        scale: 1
+        offset: 0
+      - name: pressure
+        address: 20
+        type: int16
+        writable: true
+        scale: 0.1
+        offset: 0
+        min: 0
+        max: 50
+      - name: status_word
+        address: 30
+        type: uint16
+        writable: false
+        scale: 1
+        offset: 0
+      - name: run_flag
+        address: 40
+        type: bool_bit
+        bit: 0
+        writable: true
+        scale: 1
+        offset: 0
+      - name: setpoint
+        address: 50
+        type: float32_abcd
+        writable: true
+        scale: 1
+        offset: 0
+        min: 0
+        max: 100
