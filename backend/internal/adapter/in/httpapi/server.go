@@ -1,28 +1,32 @@
 package httpapi
 
 import (
+	"errors"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
+	"github.com/bytecode/modbus-mapping-gateway/internal/domain"
 	"github.com/bytecode/modbus-mapping-gateway/internal/usecase"
 )
 
 type Server struct {
 	svc    *usecase.GatewayService
+	diag   *usecase.DiagnosticsService
 	secret []byte
 }
 
-func NewServer(svc *usecase.GatewayService) *Server {
+func NewServer(svc *usecase.GatewayService, diag *usecase.DiagnosticsService) *Server {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		secret = "modbus-mapping-gateway-demo-secret-32b"
 	}
-	return &Server{svc: svc, secret: []byte(secret)}
+	return &Server{svc: svc, diag: diag, secret: []byte(secret)}
 }
 
 func (s *Server) Router() *gin.Engine {
@@ -42,6 +46,10 @@ func (s *Server) Router() *gin.Engine {
 		auth.GET("/devices/:id/snapshot", s.snapshot)
 		auth.GET("/mapping", s.getMapping)
 		auth.POST("/reload", s.reload)
+		auth.GET("/diagnostics", s.diagnostics)
+		auth.GET("/diagnostics/samples", s.diagSamples)
+		auth.POST("/diagnostics/:id/start", s.diagStart)
+		auth.POST("/diagnostics/:id/stop", s.diagStop)
 	}
 	return r
 }
@@ -133,8 +141,24 @@ func (s *Server) health(c *gin.Context) {
 	c.JSON(http.StatusOK, s.svc.Health())
 }
 
+// deviceJSON flattens DeviceDef fields and appends the diagnostics
+// summary, keeping the pre-existing /api/devices response shape.
+type deviceJSON struct {
+	domain.DeviceDef
+	Diag usecase.DeviceDiag `json:"diag"`
+}
+
 func (s *Server) listDevices(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"devices": s.svc.ListDevices()})
+	sums, err := s.diag.DeviceSummaries(c.Query("sort"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	out := make([]deviceJSON, 0, len(sums))
+	for _, sum := range sums {
+		out = append(out, deviceJSON{DeviceDef: sum.Device, Diag: sum.Diag})
+	}
+	c.JSON(http.StatusOK, gin.H{"devices": out})
 }
 
 func (s *Server) listPoints(c *gin.Context) {
@@ -174,12 +198,61 @@ func (s *Server) writePoint(c *gin.Context) {
 }
 
 func (s *Server) snapshot(c *gin.Context) {
-	snap, err := s.svc.Snapshot(c.Param("id"))
+	// manual snapshots are recorded into the diagnostics ring
+	snap, _, err := s.diag.RecordManualSnapshot(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, snap)
+}
+
+func (s *Server) diagnostics(c *gin.Context) {
+	c.JSON(http.StatusOK, s.diag.Overview())
+}
+
+func (s *Server) diagSamples(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	c.JSON(http.StatusOK, gin.H{"samples": s.diag.Samples(c.Query("deviceId"), limit)})
+}
+
+func (s *Server) diagStart(c *gin.Context) {
+	if !s.requireEngineer(c) {
+		return
+	}
+	var req struct {
+		IntervalMs int `json:"intervalMs"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	st, err := s.diag.Start(c.Param("id"), req.IntervalMs)
+	if err != nil {
+		switch {
+		case errors.Is(err, usecase.ErrSamplerConflict):
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error(), "state": s.diag.Status(c.Param("id")).State})
+		case strings.HasPrefix(err.Error(), "device not found"):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, st)
+}
+
+func (s *Server) diagStop(c *gin.Context) {
+	if !s.requireEngineer(c) {
+		return
+	}
+	st, err := s.diag.Stop(c.Param("id"))
+	if err != nil {
+		if errors.Is(err, usecase.ErrSamplerNotRunning) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error(), "state": string(domain.SamplerIdle)})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, st)
 }
 
 func (s *Server) getMapping(c *gin.Context) {

@@ -15,3 +15,21 @@ type MappingStore interface {
 	Save(yamlText string) error
 	Path() string
 }
+
+// Snapshotter produces a device snapshot (merged-range modbus read +
+// decode). Implemented by usecase.GatewayService.
+type Snapshotter interface {
+	Snapshot(deviceID string) (*domain.Snapshot, error)
+}
+
+// DeviceLister lists configured devices. Implemented by
+// usecase.GatewayService.
+type DeviceLister interface {
+	ListDevices() []domain.DeviceDef
+}
+
+// DiagStore persists the diagnostics ring buffer and sampler states.
+type DiagStore interface {
+	Load() (domain.DiagState, error)
+	Save(state domain.DiagState) error
+}
